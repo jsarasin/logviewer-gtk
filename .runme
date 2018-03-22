@@ -1,0 +1,6 @@
+# Custom run target information for this project
+# src/loggtk.py
+
+logview-gtk:src/:python3.5 loggtk.py
+test::python3.5 test.py
+Log System Test::python3.5 src/logsystem/test.py

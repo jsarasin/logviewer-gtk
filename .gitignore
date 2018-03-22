@@ -1,0 +1,10 @@
+log
+log-centos
+.idea/
+*.pyc
+__pycache__
+*/__pycache__
+old-cat
+
+
+
