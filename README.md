@@ -15,5 +15,5 @@ goals are:
 
 *This is still in a very early stage, more to come.*
  
-![Alt text](/../<screenshots>/logview-gtk.png?raw=true "Early screenshot")
+![Screenshot](/../screenshots/logview-gtk.png?raw=true "Early screenshot")
 
