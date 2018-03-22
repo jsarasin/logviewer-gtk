@@ -5,6 +5,7 @@ log-centos
 __pycache__
 */__pycache__
 old-cat
+.glade~
 
 
 
