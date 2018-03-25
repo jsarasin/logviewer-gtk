@@ -30,14 +30,19 @@ class Catfood:
         cat = LogSystem(SyslogTarget(os.getcwd() + "/log/"), self.callback)
         result = cat.get_services()
         time.sleep(0.01)
-        result = cat.get_service_modules("samba")
+        for n in self.services:
+            result = cat.get_service_modules(n)
         time.sleep(0.01)
 
-        module = cat._target._log_services['samba']['modules']['log.nmbd']
-        print("\n"*4)
-        for index, n in enumerate(module._sources):
-            print("  %-5s:%-60s - roll: %s" % (index, n.absolute_filename, n.roll))
-        print("Historical: %s %s" % (module._historical_source.absolute_filename, module._historical_source.roll))
+        cat._target.debug_printout()
+
+
+
+        # module = cat._target._log_services['samba']['modules']['log.nmbd']
+        # print("\n"*4)
+        # for index, n in enumerate(module._sources):
+        #     print("  %-5s:%-60s - roll: %s" % (index, n.absolute_filename, n.roll))
+        # print("Historical: %s %s" % (module._historical_source.absolute_filename, module._historical_source.roll))
 
 
         # result = cat.load_older_messages("samba", "log.nmbd", 1000)

@@ -20,6 +20,16 @@ class SyslogLogger:
 
         self._scan_service_path(service_path)
 
+    def debug_printout(self):
+        for n in sorted(self._log_services):
+            print("Service:", n)
+            for k in sorted(self._log_services[n]['modules']):
+                for z in self._log_services[n][k]._sources:
+                    print(z)
+
+
+
+
     def get_services(self):
         """ Get a list of the services detected by this LogSystem
             Returns: [str]

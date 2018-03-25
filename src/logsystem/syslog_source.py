@@ -65,7 +65,7 @@ class SyslogSource:
 
 
         if self._flat_scan:
-            self._roll = 0
+            self._roll = None
             self._service_name = self._relative_filename
             self._service_module = self._relative_filename
         else:

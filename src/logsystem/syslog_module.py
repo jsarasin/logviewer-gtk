@@ -53,6 +53,8 @@ class SyslogModule:
         self._messages = []
         self._messages_lock = False
 
+
+
     def get_columns(self):
         return self._parser.get_columns()
 
