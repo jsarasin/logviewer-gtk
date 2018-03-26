@@ -5,7 +5,7 @@ import logsystem
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk
 
-from loghistory import LogMinimapView
+from LogMinimap import LogMinimapView
 
 
 from CellRendererImageText import CellRendererImageText
@@ -345,8 +345,8 @@ class MainWindow:
         self.service_column_setup()
         self.messages_setup()
 
-        self.load_more_old_messages = self.builder.get_object("load_more_old_messages")
-        self.load_more_old_messages.connect("clicked", self.load_more_old_messages_now)
+        # # self.load_more_old_messages = self.builder.get_object("load_more_old_messages")
+        # self.load_more_old_messages.connect("clicked", self.load_more_old_messages_now)
 
 
         # Setup the custom log minimap viewer

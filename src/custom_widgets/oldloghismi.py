@@ -92,3 +92,72 @@ if self.view_area_center != -1:
 
 
 
+    def get_total_log_size(self):
+        return sum(log.log_size for log in self._log)
+
+    def update_log_render_size(self, width, height):
+        self._last_render_size_width = width
+        self._last_render_size_height = height
+
+        byte_to_pixel = float(width - len(self._log)) / float(self.get_total_log_size())
+
+        last_x_position = float(0)
+        for log in reversed(self._log):
+            x1 = last_x_position
+            x2 = last_x_position + log.log_size * byte_to_pixel
+
+            log.x1 = int(x1)
+            log.x2 = int(x2)
+            last_x_position = x2 + 1
+
+
+
+    def mouse_move(self, widget, event):
+        # Find what cell the mouse is in
+        # for index, n in enumerate(reversed(self._log)):
+        #     cell_start = n.x1
+        #     cell_end = n.x2
+        #     if event.x >= cell_start and event.x < cell_end:
+        #         self.mouse_in_cell = index
+        #         self.queue_draw()
+        # if self.button1_down == True and self.view_area_center != event.x:
+        #     self.view_area_center = event.x
+        #     self.queue_draw()
+
+
+class LogRegion:
+    preview_percent = property((lambda self: float(self.preview_bytes) / float(self.log_size)),
+                               None,
+                               None,
+                               None)
+    log_size = int
+
+    def __init__(self, log_bytes):
+        self.log_size = log_bytes
+        self.message_line_lengths = []
+        self.preview_bytes = 0
+        self.render_line_heights = None
+
+        # float(log_bytes * 0.5), [random.randrange(1, 101, 1) for _ in range(100)]
+        noisy_preview = []
+        remaining = log_bytes
+
+        while (remaining > 0):
+            noise = random.randrange(0, 200)
+            if noise > remaining:
+                noise = remaining
+
+            noisy_preview.append(noise)
+            remaining = remaining - noise
+
+        self.append_preview(noisy_preview)
+
+    def append_preview(self, preview_list):
+        # preview_list is an array of [len(message)]
+        max_in_list = max(preview_list)
+        preview_bytes = sum(preview_list)
+
+        for n in preview_list:
+            preview_percent = n / max_in_list
+            self.message_line_lengths.append(preview_percent)
+        self.preview_bytes = self.preview_bytes + preview_bytes

@@ -189,15 +189,57 @@
                     <property name="can_focus">False</property>
                     <property name="spacing">5</property>
                     <child>
-                      <object class="GtkButton" id="load_more_messages">
-                        <property name="label" translatable="yes">Load More</property>
+                      <object class="GtkBox" id="box5">
                         <property name="visible">True</property>
-                        <property name="can_focus">True</property>
-                        <property name="receives_default">True</property>
-                        <property name="xalign">0.49000000953674316</property>
+                        <property name="can_focus">False</property>
+                        <child>
+                          <object class="GtkButton" id="button1">
+                            <property name="label">gtk-media-previous</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                            <property name="use_stock">True</property>
+                            <property name="always_show_image">True</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">0</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkEntry" id="entry1">
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="text" translatable="yes">1000</property>
+                            <property name="primary_icon_tooltip_text" translatable="yes">Number of bytes to load</property>
+                            <property name="input_purpose">number</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">1</property>
+                          </packing>
+                        </child>
+                        <child>
+                          <object class="GtkButton" id="button2">
+                            <property name="label">gtk-media-next</property>
+                            <property name="visible">True</property>
+                            <property name="can_focus">True</property>
+                            <property name="receives_default">True</property>
+                            <property name="use_stock">True</property>
+                            <property name="image_position">right</property>
+                            <property name="always_show_image">True</property>
+                          </object>
+                          <packing>
+                            <property name="expand">False</property>
+                            <property name="fill">True</property>
+                            <property name="position">2</property>
+                          </packing>
+                        </child>
                       </object>
                       <packing>
-                        <property name="expand">False</property>
+                        <property name="expand">True</property>
                         <property name="fill">True</property>
                         <property name="position">0</property>
                       </packing>
