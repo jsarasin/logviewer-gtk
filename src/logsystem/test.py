@@ -6,6 +6,7 @@ import time
 
 class Catfood:
     def callback(self, event):
+       # print("Client callback event", event)
         if type(event) == logsystem.Event.GetServices:
             for k in event.services:
                 self.services[k] = dict()
@@ -29,10 +30,10 @@ class Catfood:
     def go(self):
         cat = LogSystem(SyslogTarget(os.getcwd() + "/log/"), self.callback)
         result = cat.get_services()
-        time.sleep(0.01)
+
         for n in self.services:
             result = cat.get_service_modules(n)
-        time.sleep(0.01)
+        time.sleep(2)
 
         cat._target.debug_printout()
 

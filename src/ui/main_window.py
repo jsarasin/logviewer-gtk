@@ -5,7 +5,7 @@ import logsystem
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk
 
-from loghistory import LogHistoryView
+from loghistory import LogMinimapView
 
 
 from CellRendererImageText import CellRendererImageText
@@ -37,15 +37,28 @@ class MainWindow:
     def _logger_callback_load_older_messages(self, event):
         treestore = self._services[event.service_name][event.service_module]['treestore']
 
+        if event.service_name == self._selected_service and event.service_module == self._selected_module:
+            treestore_visible = True
+        else:
+            treestore_visible = False
+
+        # GTK will append items to our treestore very slowly if it is visible, hide it if it is
+        visible_model = self.treeview_messages.get_model()
+
+        if visible_model == treestore:
+            self.treeview_messages.set_model(None)
+
         for message in event.messages:
             row = []
             for index, column in enumerate(self._services[event.service_name][event.service_module]['columns']):
                 column_key, column_display_name, column_type, column_combo, column_visible = column
                 row.append(str(message[column_key]))
-                print("New message [%s][%s]:[%s]" % (event.service_name, event.service_module, message))
             treestore.append(None, row)
 
-        self.treeview_messages.set_model(treestore)
+        if treestore_visible:
+            self.set_treeview_messages_model_and_columns(event.service_name, event.service_module)
+
+
 
     def _logger_callback(self, event):
         if type(event) == Event.GetServices:
@@ -178,19 +191,12 @@ class MainWindow:
         # list all the items in this store
         iter = treestore.get_iter_first()
         while(iter):
-            print("Item value: '%s'" % (treestore[iter][0]))
             iter = treestore.iter_next(iter)
-
-
-        columns = self.treeview_messages.get_columns()
 
         self.clear_treewview_messages_columns()
         self.load_message_columns(service_name, service_module)
 
         self.treeview_messages.set_model(treestore)
-
-
-
 
         # Cancel any watch action UI updates
 
@@ -255,8 +261,13 @@ class MainWindow:
                 #self.set_treeview_messages_model_and_columns(self._selected_service, self._selected_service)
             else:
                 self.set_treeview_messages_model_and_columns(self._selected_service, self._selected_module)
-
-
+    def service_selection_activated(self, treeview, path, column):
+        # Expand/Collapse a top level row on double click
+        if path.get_depth() == 1:
+            if treeview.row_expanded(path):
+                treeview.collapse_row(path)
+            else:
+                treeview.expand_row(path, True)
 
     #                                                                                            treeview_services_click
     def treeview_services_click(self, treeview, event):
@@ -305,6 +316,10 @@ class MainWindow:
     def treeview_messages_vscroll_changed(self, widget, user_data):
         pass
 
+    def load_more_old_messages_now(self, widget):
+        result = self._logger.load_older_messages(self._selected_service, self._selected_module, 1000)
+
+
     ####################################################################################################################
     ## Glade Initialization of main_window
     ####################################################################################################################
@@ -318,7 +333,7 @@ class MainWindow:
         self._services_tree_store = Gtk.TreeStore(str, GdkPixbuf.Pixbuf, bool)
         self.treeview_services.connect("button_press_event", self.treeview_services_click)
         self.treeview_services.connect("cursor-changed", self.service_selection_change)
-
+        self.treeview_services.connect("row-activated", self.service_selection_activated)
         render_service_name = CellRendererImageText()
         column_service_name = Gtk.TreeViewColumn("Service", render_service_name, text=0, pixbuf=1, empty=2)
         self.treeview_services.append_column(column_service_name)
@@ -327,20 +342,15 @@ class MainWindow:
 
     def connect_builder_objects(self):
         self.window.connect("delete-event", Gtk.main_quit)
-        # treeview_services
         self.service_column_setup()
         self.messages_setup()
 
-        #self.watch_toggle.connect("toggled", self.watch_toggle_toggled)
-        #self.watch_goto_bottom.connect("toggled", self.watch_goto_bottom_toggled)
-
-        # message_filter_combos - This is the fancy ComboBox/Label pairs at the top of
-        # the message area, used for special filters
-        #self.load_more_messages.connect("clicked", self.load_more_old_messages_now)
+        self.load_more_old_messages = self.builder.get_object("load_more_old_messages")
+        self.load_more_old_messages.connect("clicked", self.load_more_old_messages_now)
 
 
         # Setup the custom log minimap viewer
-        self.log_history_viewer = LogHistoryView()
+        self.log_history_viewer = LogMinimapView()
         self.log_history_viewer.show()
         self.log_history_viewer.set_hexpand(True)
 

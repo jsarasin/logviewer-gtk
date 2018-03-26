@@ -1,5 +1,7 @@
 from os import listdir
 from os.path import isfile, join
+from concurrent.futures import ThreadPoolExecutor
+
 
 from syslog_logger import SyslogLogger
 
@@ -44,7 +46,9 @@ class LogSystem:
             self._target = SyslogLogger(target.target_path)
             self._client_callback = callback
 
-            self._use_main_thread = True
+            self._use_main_thread = False
+            self._thread_pool = ThreadPoolExecutor(max_workers=5)
+            self._futures = []
 
     def get_services(self):
         """
@@ -56,6 +60,10 @@ class LogSystem:
                 services = self._target.get_services()
                 event = Event.GetServices(services)
                 self._client_callback(event)
+            else:
+                future = self._thread_pool.submit(self._target.get_services)
+                future.add_done_callback(self._future_callback_get_services)
+                self._futures.append(future)
 
     def get_service_modules(self, service_name):
         """
@@ -67,6 +75,10 @@ class LogSystem:
                 modules = self._target.get_service_modules(service_name)
                 event = Event.GetModules(service_name, modules)
                 self._client_callback(event)
+            else:
+                future = self._thread_pool.submit(self._target.get_service_modules, service_name)
+                future.add_done_callback(self._future_callback_get_modules)
+                self._futures.append(future)
 
     def get_service_module_columns(self, service_name: str, service_module: str):
         """
@@ -78,6 +90,11 @@ class LogSystem:
                 columns = self._target.get_service_module_columns(service_name, service_module)
                 event = Event.GetModuleColumns(service_name, service_module, columns)
                 self._client_callback(event)
+            else:
+                future = self._thread_pool.submit(self._target.get_service_module_columns, service_name, service_module)
+                future.add_done_callback(self._future_callback_get_module_columns)
+                self._futures.append(future)
+
 
     def load_older_messages(self, service_name: str, service_module: str, try_bytes: int):
         """
@@ -94,7 +111,10 @@ class LogSystem:
                 messages = self._target.load_older_messages(service_name, service_module, try_bytes)
                 event = Event.LoadOlderMessages(service_name, service_module, messages)
                 self._client_callback(event)
-
+            else:
+                future = self._thread_pool.submit(self._target.load_older_messages, service_name, service_module, try_bytes)
+                future.add_done_callback(self._future_callback_load_older_messages)
+                self._futures.append(future)
 
     def get_message_range(self, service_name: str, service_module: str, start: int, end: int):
         """
@@ -115,6 +135,27 @@ class LogSystem:
         :return: [logsystem.MessageColumns]
         """
         pass
+
+    def _future_callback_get_services(self, future):
+        event = Event.GetServices(future.result())
+        self._client_callback(event)
+
+    def _future_callback_get_modules(self, future):
+        #print ("service na", service_name2)
+        result = future.result()
+        service_name, modules = result
+        event = Event.GetModules(service_name, modules)
+        self._client_callback(event)
+
+    def _future_callback_get_module_columns(self, future):
+        service_name, service_module, columns = future.result()
+        event = Event.GetModuleColumns(service_name, service_module, columns)
+        self._client_callback(event)
+
+    def _future_callback_load_older_messages(self, future):
+        service_name, service_module, messages = future.result()
+        event = Event.LoadOlderMessages(service_name, service_module, messages)
+        self._client_callback(event)
 
     def set_watch_callback(self, callback, user_data):
         """

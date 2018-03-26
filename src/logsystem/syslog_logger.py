@@ -1,3 +1,4 @@
+
 import io
 import os
 import mimetypes
@@ -5,6 +6,7 @@ import mimetypes
 from syslog_source import SyslogSource
 from syslog_module import SyslogModule
 import column
+
 
 
 class SyslogLogger:
@@ -20,14 +22,15 @@ class SyslogLogger:
 
         self._scan_service_path(service_path)
 
+
+
     def debug_printout(self):
+        print("Services: ", self._log_services)
         for n in sorted(self._log_services):
             print("Service:", n)
-            for k in sorted(self._log_services[n]['modules']):
-                for z in self._log_services[n][k]._sources:
-                    print(z)
-
-
+            for k in sorted(self._log_services[n]):
+                for z in self._log_services[n][k]:
+                    print("  %s" % z)
 
 
     def get_services(self):
@@ -54,7 +57,8 @@ class SyslogLogger:
 
             modules.append([n, empty])
 
-        return modules
+        result = (service_name, modules)
+        return result
 
     def get_service_module_sources(self, service_name, service_module):
         """ Get a list of the specified modules sources.
@@ -67,13 +71,13 @@ class SyslogLogger:
     def get_service_module_columns(self, service_name, service_module):
         columns = self._get_module_class(service_name, service_module).get_columns();
 
-        return columns
+        return (service_name, service_module, columns)
 
     def load_older_messages(self, service_name: str, service_module: str, try_bytes: int):
         module = self._get_module_class(service_name, service_module)
         messages = module._load_older_messages(try_bytes)
 
-        return messages
+        return (service_name, service_module, messages)
 
     def get_message_range(self, service_name, service_module, start, end):
         pass
