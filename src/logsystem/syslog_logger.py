@@ -63,10 +63,24 @@ class SyslogLogger:
     def get_service_module_sources(self, service_name, service_module):
         """ Get a list of the specified modules sources.
 
-            Returns: [SyslogSource]
+            Returns: (service_name, service_module, [dict_source])
+            dict_source = {'relative_filename', 'file_size', 'is_compressed'}
         """
-        module = self._log_services[service_name]['modules']
-        pass
+        sources = []
+
+        modules = self._log_services[service_name]['modules']
+        for n in modules:
+            module = self._get_module_class(service_name, service_module)
+
+            for k in module._sources:
+                source = dict()
+                source['relative_filename'] = k.relative_filename
+                source['file_size'] = k.file_size
+                source['is_compressed'] = k.is_compressed
+                sources.append(source)
+
+        return (service_name, service_module, sources)
+
 
     def get_service_module_columns(self, service_name, service_module):
         columns = self._get_module_class(service_name, service_module).get_columns();
@@ -75,9 +89,14 @@ class SyslogLogger:
 
     def load_older_messages(self, service_name: str, service_module: str, try_bytes: int):
         module = self._get_module_class(service_name, service_module)
-        messages = module._load_older_messages(try_bytes)
+        older_messages = module._load_older_messages(try_bytes)
 
-        return (service_name, service_module, messages)
+        if older_messages is None:
+            return (service_name, service_module, None, None)
+        else:
+            source, messages = older_messages
+
+        return (service_name, service_module, messages, source)
 
     def get_message_range(self, service_name, service_module, start, end):
         pass
