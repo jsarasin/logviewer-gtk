@@ -71,7 +71,7 @@ class SyslogModule:
         # A parser has not been determined for this object, get one now
         if self._parser is None:
             sample_messages = ""
-            self._get_older_messages_text(1000, no_decompress=True) # TODO: Multiprocess?
+            self._get_older_messages_text(1000, no_decompress=True)
             self._parser = self._parser_chooser.guess_from_sample(sample_messages)
 
         self._historical_source = self._determine_newest_service_module_file()
@@ -147,10 +147,8 @@ class SyslogModule:
         # Has this module been accessed at all?
         current_source = self._historical_source
         if current_source is None:
-            # if self._service_name == 'samba' and self._service_module == "log.nmbd":
-            #     print("accessy")
 
-            first_service_module_file = self._determine_older_service_module_file(None)
+            first_service_module_file = self._determine_newest_service_module_file()
             # if self._service_name == 'samba' and self._service_module == "log.nmbd":
             #     print("Found %s to be the oldest file" % first_service_module_file.absolute_filename)
             self._historical_source = first_service_module_file

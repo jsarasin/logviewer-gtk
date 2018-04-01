@@ -55,7 +55,7 @@ class MainWindow:
             else:
                 full_show_treeview = False
                 # GTK will append items to our treestore very slowly if it is visible, hide it if it is
-            # self.treeview_messages.set_model(None)
+                self.treeview_messages.set_model(None)
         else:
             this_sm_visible = False
             full_show_treeview = False
@@ -189,6 +189,7 @@ class MainWindow:
             parent = self._services_tree_store.append(None, [service_name, icon, False])
 
         self._services_tree_store.append(parent, [service_module, None, empty])
+
     ####################################################################################################################
     ## UI functionality utility functions                                                                    Setup of UI
     ####################################################################################################################

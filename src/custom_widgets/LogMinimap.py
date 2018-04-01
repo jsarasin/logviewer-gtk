@@ -235,6 +235,13 @@ class LogMinimapView(Gtk.DrawingArea):
                 cr.line_to(line_left, line_bottom)
                 cr.stroke()
 
+            # Print the filename
+            # matrix = cairo.Matrix(20, 0, 0, 20, 0, 0)
+
+            # cr.set_font_matrix(matrix)
+            # surface = cr.get_group_target()
+            # new_surface = surface.create_similar(cairo.Content.COLOR_ALPHA, 100, 100)
+
             text_height = 10
             cr.move_to(cell_left + 11, cell_top + 11 + text_height)
             cr.set_source_rgb(0.3, 0.3, 0.3)
