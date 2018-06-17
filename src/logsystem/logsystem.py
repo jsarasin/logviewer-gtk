@@ -184,3 +184,4 @@ class LogSystem:
 
     def end_watching_all(self):
         pass
+

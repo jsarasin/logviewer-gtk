@@ -124,6 +124,7 @@ class ViewServiceWindow():
         if icon is not None:
             self.service_icon.set_visible(True)
             self.service_icon.set_from_pixbuf(icon.scale_simple(64, 64,  GdkPixbuf.InterpType.BILINEAR))
+
         else:
             self.service_icon.set_visible(False)
 
