@@ -71,19 +71,21 @@ class SyslogModule:
         # A parser has not been determined for this object, get one now
         if self._parser is None:
             sample_messages = ""
-            self._get_older_messages_text(1000, no_decompress=True) # TODO: Multiprocess?
+            self._get_older_messages_text(1000, no_decompress=True)
             self._parser = self._parser_chooser.guess_from_sample(sample_messages)
 
         self._historical_source = self._determine_newest_service_module_file()
 
     def _load_older_messages(self, try_bytes=4000, no_decompress=False):
         messages_text = self._get_older_messages_text(try_bytes, no_decompress)
+        if messages_text is None:
+            return None
 
         messages = []
         for n in messages_text:
             messages.append(self._parser.parse_line(n))
 
-        return messages
+        return (self._historical_source.relative_filename, messages)
 
     def _determine_newest_service_module_file(self):
         lowest = None
@@ -130,6 +132,7 @@ class SyslogModule:
                 lowest_index = index
 
         if lowest_index is None:
+            return None
             raise Exception("Couldn't find the lowest roll in [%s][%s]" % (self._service_name, self._service_module))
 
         # TODO: Check the modification date for the sanity check.
@@ -144,10 +147,8 @@ class SyslogModule:
         # Has this module been accessed at all?
         current_source = self._historical_source
         if current_source is None:
-            # if self._service_name == 'samba' and self._service_module == "log.nmbd":
-            #     print("accessy")
 
-            first_service_module_file = self._determine_older_service_module_file(None)
+            first_service_module_file = self._determine_newest_service_module_file()
             # if self._service_name == 'samba' and self._service_module == "log.nmbd":
             #     print("Found %s to be the oldest file" % first_service_module_file.absolute_filename)
             self._historical_source = first_service_module_file
@@ -165,6 +166,8 @@ class SyslogModule:
     def _get_older_messages_text(self, try_bytes=4000, no_decompress=False):
         self._update_historical_module_file()
         current_file = self._historical_source
+        if current_file is None:
+            return None
 
         # The file has been exhausted
         if current_file.read_older_position == -1:

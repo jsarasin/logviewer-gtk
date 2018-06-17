@@ -28,10 +28,16 @@ class Event:
             self.service_module = service_module
             self.columns = columns
     class LoadOlderMessages:
-        def __init__(self, service_name, service_module, messages):
+        def __init__(self, service_name, service_module, messages, source):
             self.service_name = service_name
             self.service_module = service_module
             self.messages = messages
+            self.source = source
+    class GetModuleSources:
+        def __init__(self, service_name, service_module, sources):
+            self.service_name = service_name
+            self.service_module = service_module
+            self.sources = sources
 
 
 class SyslogTarget:
@@ -95,6 +101,14 @@ class LogSystem:
                 future.add_done_callback(self._future_callback_get_module_columns)
                 self._futures.append(future)
 
+    def get_service_module_sources(self, service_name, service_module):
+        if self._target is not None:
+            if self._use_main_thread:
+                raise Exception("Not supported")
+            else:
+                future = self._thread_pool.submit(self._target.get_service_module_sources, service_name, service_module)
+                future.add_done_callback(self._future_callback_get_module_sources)
+                self._futures.append(future)
 
     def load_older_messages(self, service_name: str, service_module: str, try_bytes: int):
         """
@@ -152,9 +166,16 @@ class LogSystem:
         event = Event.GetModuleColumns(service_name, service_module, columns)
         self._client_callback(event)
 
+    def _future_callback_get_module_sources(self, future):
+        service_name, service_module, sources = future.result()
+        event = Event.GetModuleSources(service_name, service_module, sources)
+        self._client_callback(event)
+
     def _future_callback_load_older_messages(self, future):
-        service_name, service_module, messages = future.result()
-        event = Event.LoadOlderMessages(service_name, service_module, messages)
+        result = future.result()
+        service_name, service_module, messages, source = result
+        event = Event.LoadOlderMessages(service_name, service_module, messages, source)
+
         self._client_callback(event)
 
     def set_watch_callback(self, callback, user_data):

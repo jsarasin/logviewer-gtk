@@ -5,7 +5,7 @@ import logsystem
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk
 
-from LogMinimap import LogMinimapView
+from LogMinimap import LogMinimapView, LogMinimapModel, LogMinimapRegion
 
 
 from CellRendererImageText import CellRendererImageText
@@ -15,6 +15,17 @@ from icon_for_service import icon_for_service
 from logsystem import LogSystem, Event, SyslogTarget
 
 from pprint import pprint
+
+
+# self._services[event.service_name][event.service_module]['minimap_model'] = LogMinimapModel()
+# self._services[event.service_name][event.service_module]['treestore'] = Gtk.TreeStore()
+# self._services[event.service_name][event.service_module]['columns'] = []
+    # column_key, column_display_name, column_type, column_combo, column_visible = n
+    # self._services[event.service_name][event.service_module]['columns'].append(n)
+# self._services[event.service_name][event.service_module]['sources'] = [dict_source]
+    # dict_source = {'relative_filename', 'file_size', 'is_compressed'}
+
+
 class MainWindow:
     def _logger_callback_message_columns(self, event):
         types = []
@@ -30,52 +41,88 @@ class MainWindow:
 
         treestore.set_column_types(types)
 
-        # Update the view
-        # if self._selected_service == event.service_name and self._selected_module == event.service_module:
-        #    self.set_treeview_messages_model_and_columns(event.service_name, event.service_module)
-
     def _logger_callback_load_older_messages(self, event):
         treestore = self._services[event.service_name][event.service_module]['treestore']
+        minimap_model = self._services[event.service_name][event.service_module]['minimap_model']
+
+        minimap_region = minimap_model.get_region(event.source)
+
 
         if event.service_name == self._selected_service and event.service_module == self._selected_module:
-            treestore_visible = True
+            this_sm_visible = True
+            if self.treeview_messages.get_model() is None:
+                full_show_treeview = True
+            else:
+                full_show_treeview = False
+                # GTK will append items to our treestore very slowly if it is visible, hide it if it is
+                self.treeview_messages.set_model(None)
         else:
-            treestore_visible = False
+            this_sm_visible = False
+            full_show_treeview = False
 
-        # GTK will append items to our treestore very slowly if it is visible, hide it if it is
-        visible_model = self.treeview_messages.get_model()
-
-        if visible_model == treestore:
-            self.treeview_messages.set_model(None)
+        if event.messages is None:
+            return
 
         for message in event.messages:
-            row = []
+            columns = []
+
             for index, column in enumerate(self._services[event.service_name][event.service_module]['columns']):
                 column_key, column_display_name, column_type, column_combo, column_visible = column
-                row.append(str(message[column_key]))
-            treestore.append(None, row)
 
-        if treestore_visible:
-            self.set_treeview_messages_model_and_columns(event.service_name, event.service_module)
+                columns.append(str(message[column_key]))
+
+            minimap_region.append_line(len(str(message[column_key])))
+
+            treestore.append(None, columns)
+
+        if full_show_treeview:
+            self.set_visible_service_module(event.service_name, event.service_module)
 
 
+        # Update the minimap with the new messages
+        if self.log_history_viewer._orientation == LogMinimapView.Horizontal:
+            minimap_size = self.log_history_viewer.get_allocated_width()
+        elif self.log_history_viewer._orientation == LogMinimapView.Vertical:
+            minimap_size = self.log_history_viewer.get_allocated_height()
+        minimap_model.rebuild_minimap(minimap_size)
+
+    def _logger_callback_get_service_module_sources(self, event):
+        self._services[event.service_name][event.service_module]['sources'] = event.sources
+
+        new_minimap_model = LogMinimapModel()
+        self._services[event.service_name][event.service_module]['minimap_model'] = new_minimap_model
+
+        for n in event.sources:
+            new_minimap_model.append_region(LogMinimapRegion(n['relative_filename'], n['file_size']))
+
+    def _logger_get_modules(self, event):
+        for n in event.modules:
+
+            if event.service_name not in self._services:
+                self._services[event.service_name] = dict()
+
+            if n[0] not in self._services[event.service_name]:
+                self._services[event.service_name][n[0]] = dict()
+
+            self._services[event.service_name][n[0]]['empty'] = n[1]
+
+            self.append_services_treestore(event.service_name, n[0], n[1])
+
+            self._logger.get_service_module_sources(event.service_name, n[0])
 
     def _logger_callback(self, event):
         if type(event) == Event.GetServices:
             for n in event.services:
                 self._logger.get_service_modules(n)
+            return
 
         if type(event) == Event.GetModules:
-            for n in event.modules:
+            self._logger_get_modules(event)
+            return
 
-                if event.service_name not in self._services:
-                    self._services[event.service_name] = dict()
-
-                if n[0] not in self._services[event.service_name]:
-                    self._services[event.service_name][n[0]] = dict()
-
-                self._services[event.service_name][n[0]]['empty'] = n[1]
-                self.append_services_treestore(event.service_name, n[0], n[1])
+        if type(event) == Event.GetModuleSources:
+            self._logger_callback_get_service_module_sources(event)
+            return
 
         if type(event) == Event.GetModuleColumns:
             self._logger_callback_message_columns(event)
@@ -142,6 +189,7 @@ class MainWindow:
             parent = self._services_tree_store.append(None, [service_name, icon, False])
 
         self._services_tree_store.append(parent, [service_module, None, empty])
+
     ####################################################################################################################
     ## UI functionality utility functions                                                                    Setup of UI
     ####################################################################################################################
@@ -150,28 +198,35 @@ class MainWindow:
         for n in columns:
             self.treeview_messages.remove_column(n)
 
-    def load_message_columns(self, service_name, service_module):
+    def build_treeview_message_columns(self, service_name, service_module):
         if self._services[service_name][service_module]['columns'] == []:
             print("no columns")
             return
 
         for index, n in enumerate(self._services[service_name][service_module]['columns']):
-                column_key, column_display_name, column_type, column_combo, column_visible = n
+            column_key, column_display_name, column_type, column_combo, column_visible = n
 
-                column_renderer = Gtk.CellRendererText()
-                column_value = Gtk.TreeViewColumn(column_display_name, column_renderer, text=0)
-                column_value.set_resizable(True)
-                self.treeview_messages.append_column(column_value)
+            column_renderer = Gtk.CellRendererText()
+            column_value = Gtk.TreeViewColumn(column_display_name, column_renderer, text=index)
+            column_value.set_resizable(True)
+            self.treeview_messages.append_column(column_value)
 
     ####################################################################################################################
     ## Higher level UI functionality                                                                         Setup of UI
     ####################################################################################################################
-    def set_treeview_messages_model_and_columns(self, service_name, service_module):
+    def set_visible_service_module(self, service_name, service_module):
+        if service_name is None or service_module is None:
+            self.log_history_viewer.set_model(None)
+            self.treeview_messages.set_model(None)
+            return
+
         if service_name not in self._services:
             raise Exception("Service: %s not in self._services" % (service_name))
 
         if service_module not in self._services[service_name]:
             raise Exception("Service module %s:%s not in self._services" % (service_name, service_module))
+
+        self.clear_treewview_messages_columns()
 
         # Create a new tree store and columns if it doesn't already exist
         if 'treestore' not in self._services[service_name][service_module]:
@@ -181,24 +236,18 @@ class MainWindow:
             self.clear_treewview_messages_columns()
 
             result1 = self._logger.get_service_module_columns(service_name, service_module)
-            result2 = self._logger.load_older_messages(service_name, service_module, 1000)
+            result2 = self._logger.load_older_messages(service_name, service_module, 4000)
             if result1 is not None or result2 is not None:
                 raise Exception("Unable to request columns or messages for service: %s:%s" % service_name, service_module)
             return
 
+        self.build_treeview_message_columns(service_name, service_module)
+
+        minimap_model = self._services[service_name][service_module]['minimap_model']
+        self.log_history_viewer.set_model(minimap_model)
         treestore = self._services[service_name][service_module]['treestore']
-
-        # list all the items in this store
-        iter = treestore.get_iter_first()
-        while(iter):
-            iter = treestore.iter_next(iter)
-
-        self.clear_treewview_messages_columns()
-        self.load_message_columns(service_name, service_module)
-
         self.treeview_messages.set_model(treestore)
 
-        # Cancel any watch action UI updates
 
     ####################################################################################################################
     ## UI Calllbacks                                                                                         Setup of UI
@@ -251,16 +300,16 @@ class MainWindow:
         else:
             raise Exception("Woo that wasn't expected")
 
-
         if self._selected_service is not None:
             if self._selected_module is None:
                 # If they have clicked on a module name try and get a module name with the same name. This indicates
                 # That there were no submodules detected
                 self.clear_treewview_messages_columns()
                 self.treeview_messages.set_model(None)
-                #self.set_treeview_messages_model_and_columns(self._selected_service, self._selected_service)
+                self.log_history_viewer.set_model(None)
             else:
-                self.set_treeview_messages_model_and_columns(self._selected_service, self._selected_module)
+                self.set_visible_service_module(self._selected_service, self._selected_module)
+
     def service_selection_activated(self, treeview, path, column):
         # Expand/Collapse a top level row on double click
         if path.get_depth() == 1:
@@ -319,6 +368,10 @@ class MainWindow:
     def load_more_old_messages_now(self, widget):
         result = self._logger.load_older_messages(self._selected_service, self._selected_module, 1000)
 
+    def timer_load_more_messages(self, user_data):
+        if self._selected_module is not None and self._selected_service is not None:
+            self._logger.load_older_messages(self._selected_service, self._selected_module, 5000)
+        return True
 
     ####################################################################################################################
     ## Glade Initialization of main_window
@@ -355,5 +408,8 @@ class MainWindow:
         self.log_history_viewer.set_hexpand(True)
 
         self.history_browser_box.add(self.log_history_viewer)
+
+        # Star the auto load more messages things
+        GLib.timeout_add(30, self.timer_load_more_messages, None)
 
 
