@@ -1,7 +1,7 @@
 import os, io
 
 from multiprocessing import Process, Queue, SimpleQueue
-from column import MessageColumns
+from logsystem.column import MessageColumns
 
 class SimpleParser:
     """
@@ -62,6 +62,18 @@ class SyslogModule:
     def add_source(self, source_object):
         if os.path.islink(source_object.absolute_filename):
             return
+
+        # Make sure we have permission for this file
+        try:
+            fp = open(source_object.absolute_filename, 'rb')
+        except PermissionError:
+            print("Permission error:", source_object.absolute_filename)
+            return
+
+        fp.close()
+
+
+
 
         if source_object.file_size != 0:
             self._empty = False

@@ -3,7 +3,7 @@ from os.path import isfile, join
 from concurrent.futures import ThreadPoolExecutor
 
 
-from syslog_logger import SyslogLogger
+from logsystem.syslog_logger import SyslogLogger
 
 # Terminology
 # service-name

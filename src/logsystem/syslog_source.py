@@ -75,10 +75,15 @@ class SyslogSource:
         self._last_modified = os.path.getmtime(self._absolute_filename)
         self._is_compressed = self._get_file_compressed()
 
-        if self._binary_check:
-            self._is_binary = SyslogSource._contains_non_utf8_chars(open(self._absolute_filename, 'rb').read(1024))
-        else:
+        try:
+            if self._binary_check:
+                self._is_binary = SyslogSource._contains_non_utf8_chars(open(self._absolute_filename, 'rb').read(1024))
+            else:
+                self._is_binary = None
+        except PermissionError:
             self._is_binary = None
+            print("Permission Error")
+
 
     def _filename_without_path_or_compression(self) -> str:
         # Break apart any directory structure

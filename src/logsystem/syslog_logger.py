@@ -3,9 +3,9 @@ import io
 import os
 import mimetypes
 
-from syslog_source import SyslogSource
-from syslog_module import SyslogModule
-import column
+from logsystem.syslog_source import SyslogSource
+from logsystem.syslog_module import SyslogModule
+import logsystem.column
 
 
 
@@ -126,7 +126,11 @@ class SyslogLogger:
         module_class.add_source(syslog_source_object)
 
     def _scan_service_path(self, service_path):
+        print("service path", service_path)
         def walk_error(onerror):
+            if type(onerror) == PermissionError:
+                print("Access denied for directory", onerror)
+                return
             raise IOError
 
         for root, dirs, files in os.walk(self._data_path, onerror=walk_error):

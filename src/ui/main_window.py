@@ -5,14 +5,14 @@ import logsystem
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, GdkPixbuf, GObject, GLib, Gdk
 
-from LogMinimap import LogMinimapView, LogMinimapModel, LogMinimapRegion
+from custom_widgets.LogMinimap import LogMinimapView, LogMinimapModel, LogMinimapRegion
 
 
 from CellRendererImageText import CellRendererImageText
 from ui.view_service_window import ViewServiceWindow
 from icon_for_service import icon_for_service
 
-from logsystem import LogSystem, Event, SyslogTarget
+from logsystem.logsystem import LogSystem, Event, SyslogTarget
 
 from pprint import pprint
 
@@ -160,7 +160,8 @@ class MainWindow:
 
         # Logger setup
         self._services = dict()
-        log_root = os.getcwd().rpartition('/')[0] + "/log/"
+        #log_root = os.getcwd().rpartition('/')[0] + "log/"
+        log_root = "/var/log/"
         self._logger = LogSystem(SyslogTarget(log_root), self._logger_callback)
         self._logger.get_services()
 
